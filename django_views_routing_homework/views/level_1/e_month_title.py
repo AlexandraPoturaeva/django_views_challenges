@@ -1,5 +1,5 @@
+import calendar
 from django.http import HttpResponse, HttpResponseNotFound
-
 
 """
 Вьюха get_month_title_view возвращает название месяца по его номеру. 
@@ -13,10 +13,13 @@ from django.http import HttpResponse, HttpResponseNotFound
 """
 
 
-def get_month_title_by_number(month_number: int):
-    pass  # код писать тут
+def get_month_title_by_number(month_number: int) -> str | None:
+    if month_number in range(1, 13):
+        return calendar.month_name[month_number]
 
 
 def get_month_title_view(request, month_number: int):
-    # код писать тут
+    month_title = get_month_title_by_number(month_number=month_number)
+    if month_title:
+        return HttpResponse(month_title)
     return HttpResponseNotFound('Месяца с таким номером не существует')
