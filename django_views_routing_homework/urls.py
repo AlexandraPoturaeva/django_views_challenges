@@ -11,7 +11,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('welcome/', welcome_user_view),
     path('banned/<slug:username>/', is_username_banned_view),
-    path('user-info-by-username/<int:username>/', get_user_info_by_username_view),
+    path('user-info-by-username/<str:username>/', get_user_info_by_username_view),
     path('products/', get_products_view),
     path('authorization/', authorization_view),
     path('process-authorization/', process_authorization_view),
