@@ -9,28 +9,35 @@
 - если пользователь на Гитхабе есть, но имя у него не указано, верните None вместо имени
 """
 
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpRequest, JsonResponse
 import requests
+from requests.models import Response
 
 
-def fetch_name_from_github_view(request: HttpRequest, github_username: str) -> HttpResponse:
-    r = requests.get(url='https://api.github.com/users/' + github_username)
+def convert_github_response_to_jsonresponse(github_response: Response) -> JsonResponse:
     user_data = None
+    data = {}
     status = 200
-    content = ''
 
     try:
-        user_data = r.json()
+        user_data = github_response.json()
     except ValueError:
+        data = {'data': {}, 'errors': 'invalid json'}
         status = 400
 
     if user_data:
-        message = user_data.get('message')
-        if message == 'Not Found':
+        github_response_status = github_response.status_code
+
+        if github_response_status == 404:
+            data = {'data': {}, 'errors': 'user not found'}
             status = 404
-            content = '{"name": None}'
         else:
             full_name = user_data.get('name')
-            content = f'{{"name": "{full_name}"}}'
+            data = {'data': {'name': full_name}}
 
-    return HttpResponse(content=content, status=status)
+    return JsonResponse(data=data, status=status)
+
+
+def fetch_name_from_github_view(request: HttpRequest, github_username: str) -> JsonResponse:
+    github_response = requests.get(url=f'https://api.github.com/users/{github_username}')
+    return convert_github_response_to_jsonresponse(github_response=github_response)

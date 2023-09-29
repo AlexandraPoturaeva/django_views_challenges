@@ -19,7 +19,7 @@
 """
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.http import HttpResponse, HttpRequest
+from django.http import HttpRequest, JsonResponse
 from typing import Mapping
 import json
 
@@ -38,59 +38,54 @@ def email_is_valid(email: str) -> bool:
 
 
 def registered_from_is_valid(registered_from: str) -> bool:
-    return registered_from in ('website', 'mobile_app')
+    return registered_from in {'website', 'mobile_app'}
 
 
 def age_is_valid(age: str) -> bool:
-    try:
-        int(age)
-    except ValueError:
-        return False
-
-    return True
+    return age.isdigit()
 
 
 def user_data_is_valid(user_data: Mapping) -> bool:
     user_data_keys = set(user_data.keys())
 
-    if user_data_keys.issubset({'full_name', 'email', 'registered_from', 'age'}):
-
-        full_name = user_data.get('full_name')
-        email = user_data.get('email')
-        registered_from = user_data.get('registered_from')
-        age = user_data.get('age')
-
-        if all([full_name, email, registered_from]):
-
-            validation_result = [
-                full_name_is_valid(full_name),
-                email_is_valid(email),
-                registered_from_is_valid(registered_from),
-            ]
-
-            if age:
-                validation_result.append(age_is_valid(age))
-
-            return all(validation_result)
-
-    else:
+    if not user_data_keys.issubset({'full_name', 'email', 'registered_from', 'age'}):
         return False
 
+    full_name = user_data.get('full_name')
+    email = user_data.get('email')
+    registered_from = user_data.get('registered_from')
+    age = user_data.get('age')
 
-def validate_user_data_view(request: HttpRequest) -> HttpResponse:
+    if not all([full_name, email, registered_from]):
+        return False
+
+    validation_result = [
+        full_name_is_valid(full_name),
+        email_is_valid(email),
+        registered_from_is_valid(registered_from),
+    ]
+
+    if age:
+        validation_result.append(age_is_valid(age))
+
+    return all(validation_result)
+
+
+def validate_user_data_view(request: HttpRequest) -> JsonResponse:
     user_data = None
     status = 200
-    content = ''
+    data = {}
 
     try:
         user_data = json.loads(request.body)
     except ValueError:
+        data = {'data': {}, 'errors': 'invalid json'}
         status = 400
 
     if user_data:
         if user_data_is_valid(user_data):
-            content = '{"is_valid": true}'
+            data = {'data': {'is_valid': True}}
         else:
-            content = '{"is_valid": false}'
+            data = {'data': {'is_valid': False}}
 
-    return HttpResponse(content=content, status=status)
+    return JsonResponse(data=data, status=status)

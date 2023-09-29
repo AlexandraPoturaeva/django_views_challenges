@@ -20,17 +20,16 @@ import string
 from django.http import HttpResponse, HttpRequest
 
 
-def random_string(length):
+def generate_random_string(length: int) -> str:
     letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for i in range(length))
+    return ''.join(random.choice(letters) for _ in range(length))
 
 
 def length_is_valid(length: str) -> int | None:
-    try:
-        length = int(length)
-    except ValueError:
+    if not length.isdigit():
         return None
 
+    length = int(length)
     return length if length in range(1, 100000) else None
 
 
@@ -45,6 +44,6 @@ def generate_file_with_text_view(request: HttpRequest) -> HttpResponse:
 
     else:
         response = HttpResponse(content_type='text/plain')
-        response['Content-Disposition'] = 'attachment; filename="filename.txt"'
-        response.write(random_string(length))
+        response['Content-Disposition'] = 'attachment; filename="random_text.txt"'
+        response.write(generate_random_string(length))
         return response
