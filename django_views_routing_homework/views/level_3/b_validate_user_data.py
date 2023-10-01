@@ -24,11 +24,11 @@ from typing import Mapping
 import json
 
 
-def full_name_is_valid(full_name: str) -> bool:
+def check_full_name_is_valid(full_name: str) -> bool:
     return 5 <= len(full_name) <= 256
 
 
-def email_is_valid(email: str) -> bool:
+def check_email_is_valid(email: str) -> bool:
     try:
         validate_email(email)
     except ValidationError:
@@ -37,15 +37,15 @@ def email_is_valid(email: str) -> bool:
     return True
 
 
-def registered_from_is_valid(registered_from: str) -> bool:
+def check_registered_from_is_valid(registered_from: str) -> bool:
     return registered_from in {'website', 'mobile_app'}
 
 
-def age_is_valid(age: str) -> bool:
+def check_age_is_valid(age: str) -> bool:
     return age.isdigit()
 
 
-def user_data_is_valid(user_data: Mapping) -> bool:
+def check_user_data_is_valid(user_data: Mapping) -> bool:
     user_data_keys = set(user_data.keys())
 
     if not user_data_keys.issubset({'full_name', 'email', 'registered_from', 'age'}):
@@ -60,13 +60,13 @@ def user_data_is_valid(user_data: Mapping) -> bool:
         return False
 
     validation_result = [
-        full_name_is_valid(full_name),
-        email_is_valid(email),
-        registered_from_is_valid(registered_from),
+        check_full_name_is_valid(full_name),
+        check_email_is_valid(email),
+        check_registered_from_is_valid(registered_from),
     ]
 
     if age:
-        validation_result.append(age_is_valid(age))
+        validation_result.append(check_age_is_valid(age))
 
     return all(validation_result)
 
@@ -75,6 +75,7 @@ def validate_user_data_view(request: HttpRequest) -> JsonResponse:
     user_data = None
     status = 200
     data = {}
+    is_valid = True
 
     try:
         user_data = json.loads(request.body)
@@ -83,9 +84,9 @@ def validate_user_data_view(request: HttpRequest) -> JsonResponse:
         status = 400
 
     if user_data:
-        if user_data_is_valid(user_data):
-            data = {'data': {'is_valid': True}}
-        else:
-            data = {'data': {'is_valid': False}}
+        if not check_user_data_is_valid(user_data):
+            is_valid = False
+
+        data = {'data': {'is_valid': is_valid}}
 
     return JsonResponse(data=data, status=status)
