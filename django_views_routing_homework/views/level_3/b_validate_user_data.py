@@ -17,9 +17,76 @@
 Для тестирования рекомендую использовать Postman.
 Когда будете писать код, не забывайте о читаемости, поддерживаемости и модульности.
 """
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.http import HttpRequest, JsonResponse
+from typing import Mapping
+import json
 
-from django.http import HttpResponse, HttpRequest
+
+def check_full_name_is_valid(full_name: str) -> bool:
+    return 5 <= len(full_name) <= 256
 
 
-def validate_user_data_view(request: HttpRequest) -> HttpResponse:
-    pass  # код писать тут
+def check_email_is_valid(email: str) -> bool:
+    try:
+        validate_email(email)
+    except ValidationError:
+        return False
+
+    return True
+
+
+def check_registered_from_is_valid(registered_from: str) -> bool:
+    return registered_from in {'website', 'mobile_app'}
+
+
+def check_age_is_valid(age: str) -> bool:
+    return age.isdigit()
+
+
+def check_user_data_is_valid(user_data: Mapping) -> bool:
+    user_data_keys = set(user_data.keys())
+
+    if not user_data_keys.issubset({'full_name', 'email', 'registered_from', 'age'}):
+        return False
+
+    full_name = user_data.get('full_name')
+    email = user_data.get('email')
+    registered_from = user_data.get('registered_from')
+    age = user_data.get('age')
+
+    if not all([full_name, email, registered_from]):
+        return False
+
+    validation_result = [
+        check_full_name_is_valid(full_name),
+        check_email_is_valid(email),
+        check_registered_from_is_valid(registered_from),
+    ]
+
+    if age:
+        validation_result.append(check_age_is_valid(age))
+
+    return all(validation_result)
+
+
+def validate_user_data_view(request: HttpRequest) -> JsonResponse:
+    user_data = None
+    status = 200
+    data = {}
+    is_valid = True
+
+    try:
+        user_data = json.loads(request.body)
+    except ValueError:
+        data = {'data': {}, 'errors': 'invalid json'}
+        status = 400
+
+    if user_data:
+        if not check_user_data_is_valid(user_data):
+            is_valid = False
+
+        data = {'data': {'is_valid': is_valid}}
+
+    return JsonResponse(data=data, status=status)
